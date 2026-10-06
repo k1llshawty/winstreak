@@ -51,6 +51,55 @@ pre{white-space:pre-wrap;word-break:break-word;font:14px/1.5 ui-monospace,Consol
 .rng{text-align:center;color:var(--mut);margin-bottom:12px;font:500 14px var(--head)}
 .day h2{margin-bottom:8px}.day.today{border-color:var(--acc);box-shadow:var(--glow)}
 .val{padding:10px 0;min-height:44px;font-weight:600;word-break:break-word}
+
+/* ===== неон и анимации ===== */
+:root{--acc2:#1e90ff;--glow2:0 0 0 1px rgba(0,229,255,.35),0 0 18px rgba(0,229,255,.35),0 0 42px rgba(30,144,255,.18)}
+body::before{content:"";position:fixed;left:0;right:0;top:-40px;bottom:0;z-index:-1;pointer-events:none;
+ background-image:linear-gradient(rgba(0,229,255,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,.07) 1px,transparent 1px);
+ background-size:40px 40px;-webkit-mask-image:radial-gradient(ellipse 90% 70% at 50% 0,#000 0,transparent 75%);mask-image:radial-gradient(ellipse 90% 70% at 50% 0,#000 0,transparent 75%);
+ animation:grid 5s linear infinite;will-change:transform}
+body::after{content:"";position:fixed;left:50%;top:-120px;width:520px;height:260px;margin-left:-260px;z-index:-1;pointer-events:none;
+ background:radial-gradient(closest-side,rgba(0,229,255,.22),transparent);animation:breathe 4.5s ease-in-out infinite}
+@keyframes grid{to{transform:translateY(40px)}}
+@keyframes breathe{50%{opacity:.45;transform:scale(1.15)}}
+h1{position:relative;padding-bottom:10px;animation:flick 2.4s .1s both}
+h1::after{content:"";position:absolute;left:0;bottom:0;height:2px;width:100%;border-radius:2px;
+ background:linear-gradient(90deg,transparent,var(--acc),var(--acc2),transparent);background-size:200% 100%;box-shadow:0 0 10px var(--acc);animation:sweep 3.5s linear infinite}
+@keyframes sweep{to{background-position:-200% 0}}
+@keyframes flick{0%,6%,10%,14%{opacity:.25;text-shadow:none}8%,12%,18%,100%{opacity:1}}
+nav{box-shadow:0 0 22px rgba(0,229,255,.08)}
+nav button{transition:color .2s,background .25s,box-shadow .25s,transform .1s}
+nav button:active{transform:scale(.96)}
+nav button.on{background:linear-gradient(135deg,var(--acc),var(--acc2));animation:pulse 2.8s ease-in-out infinite}
+@keyframes pulse{50%{box-shadow:0 0 22px rgba(0,229,255,.8),0 0 40px rgba(30,144,255,.35)}}
+.card{transition:border-color .25s,box-shadow .25s;background:linear-gradient(180deg,rgba(0,229,255,.045),transparent 40%),var(--card)}
+.card:focus-within{border-color:rgba(0,229,255,.55);box-shadow:var(--glow2)}
+.btn{position:relative;overflow:hidden;background:linear-gradient(135deg,var(--acc),var(--acc2));transition:transform .12s,box-shadow .25s,filter .2s}
+.btn.s,.btn.d{background:var(--soft)}.btn.d{background:none}
+.btn:not(.s):not(.d)::after{content:"";position:absolute;top:0;bottom:0;width:40%;left:-60%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.55),transparent);transform:skewX(-20deg);animation:shine 4.5s ease-in-out infinite}
+@keyframes shine{0%,60%{left:-60%}100%{left:130%}}
+.btn:not(.s):not(.d){animation:pulse 3.2s ease-in-out infinite}
+.btn:active{transform:scale(.96);filter:brightness(1.15)}
+@media (hover:hover){.btn:hover{box-shadow:var(--glow2)}.card:hover{border-color:rgba(0,229,255,.4)}.hist:hover b{color:var(--acc);text-shadow:0 0 8px rgba(0,229,255,.6)}}
+input,select,textarea{transition:border-color .2s,box-shadow .25s}
+input:focus,select:focus,textarea:focus{box-shadow:var(--glow2)}
+.cat{display:flex;align-items:center;gap:10px}.cat::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,rgba(0,229,255,.55),transparent);box-shadow:0 0 6px rgba(0,229,255,.5)}
+.cash{animation:none;transition:text-shadow .3s}.cash:focus{text-shadow:0 0 16px rgba(0,229,255,.9)}
+.res.big.ok{text-shadow:0 0 12px rgba(61,255,176,.7)}
+.res.big.bad{text-shadow:0 0 12px rgba(255,77,109,.7);animation:alarm 1.6s ease-in-out infinite}
+@keyframes alarm{50%{opacity:.6}}
+.day.today{animation:today 2.6s ease-in-out infinite}
+@keyframes today{50%{box-shadow:0 0 28px rgba(0,229,255,.55),0 0 0 1px rgba(0,229,255,.7)}}
+.seg button{transition:all .2s}.seg button:active{transform:scale(.96)}
+.irow .nm span{text-shadow:0 0 8px rgba(61,255,176,.5);transition:transform .2s}
+#v.anim>*{animation:rise .45s cubic-bezier(.2,.8,.2,1) both}
+#v.anim>:nth-child(2){animation-delay:.05s}#v.anim>:nth-child(3){animation-delay:.1s}#v.anim>:nth-child(4){animation-delay:.15s}
+#v.anim>:nth-child(5){animation-delay:.2s}#v.anim>:nth-child(6){animation-delay:.25s}#v.anim>:nth-child(n+7){animation-delay:.3s}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.toast{animation:toast .35s cubic-bezier(.2,.9,.3,1.3) both}
+@keyframes toast{from{opacity:0;transform:translate(-50%,16px) scale(.9)}}
+#nk,#pw{font-size:18px}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
@@ -120,7 +169,7 @@ function startAuth(){
   initFb();
   auth.onAuthStateChanged(u=>{
     booting=false;const info=u&&Object.values(USERS).find(x=>x.e===u.email);
-    if(info){me=info;authed=true;loginErr="";draft.admin=info.name;save();listen();render()}
+    if(info){me=info;authed=true;loginErr="";draft.admin=info.name;save();listen();render();pop()}
     else{unsubs.forEach(f=>f());unsubs=[];me=null;authed=false;reports=[];sched={};render()}
   });
 }
@@ -148,6 +197,7 @@ function itemRows(){
   return items.map(i=>{const r=draft.inv[i.id]||(draft.inv[i.id]={s:"",e:""});
     const sold=num(r.s)-num(r.e);return{...i,start:num(r.s),end:num(r.e),sold,filled:r.e!==""}});
 }
+function pop(){const v=$("#v");v.classList.remove("anim");void v.offsetWidth;v.classList.add("anim")}
 function render(){
   $("#nav").style.display=authed?"":"none";
   $("#who").innerHTML=authed&&CLOUD&&me?`<span>${esc(me.name)} · ${ROLE[me.role]}</span><button id="out">Выйти</button>`:"";
@@ -257,8 +307,8 @@ document.addEventListener("input",e=>{
 });
 document.addEventListener("click",e=>{
   const t=e.target.closest("button,.hist");if(!t)return;
-  if(t.dataset.t){tab=t.dataset.t;open=null;render()}
-  else if(t.dataset.w!==undefined){wk=+t.dataset.w;render()}
+  if(t.dataset.t){tab=t.dataset.t;open=null;render();pop()}
+  else if(t.dataset.w!==undefined){wk=+t.dataset.w;render();pop()}
   else if(t.id==="newS"){putSched({week:keyOf(weekStart(wk)),days:blank()});render()}
   else if(t.id==="cpS"){putSched({week:keyOf(weekStart(wk)),days:JSON.parse(JSON.stringify(sched[keyOf(weekStart(wk-1))].days))});render()}
   else if(t.id==="clrS"){if(confirm("Очистить расписание этой недели?")){putSched({week:keyOf(weekStart(wk)),days:blank()});render()}}
