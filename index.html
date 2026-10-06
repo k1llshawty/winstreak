@@ -4,48 +4,50 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Win Streak — отчёт смены</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&display=swap">
+<meta name="theme-color" content="#05070a"><meta name="color-scheme" content="dark">
 <style>
-:root{--bg:#f3f2f7;--card:#fff;--ink:#1c1b26;--mut:#6b6a7c;--line:#dedce8;--acc:#5b3df5;--accink:#fff;--ok:#12805c;--bad:#c62f3e;--soft:#ece9fd;
-box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14131c;--card:#1e1d2a;--ink:#ecebf5;--mut:#9391a8;--line:#322f45;--acc:#8b74ff;--accink:#14131c;--ok:#4cd4a0;--bad:#ff7a87;--soft:#2a2645}}
-:root[data-theme="dark"]{--bg:#14131c;--card:#1e1d2a;--ink:#ecebf5;--mut:#9391a8;--line:#322f45;--acc:#8b74ff;--accink:#14131c;--ok:#4cd4a0;--bad:#ff7a87;--soft:#2a2645}
-*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
-body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 "Segoe UI",system-ui,-apple-system,Roboto,sans-serif}
-.wrap{max-width:720px;margin:0 auto;padding:16px 14px 90px}
-h1{font-size:22px;margin:4px 0 14px;letter-spacing:.2px}
-h2{font-size:17px;margin:0 0 10px}
+:root{--bg:#05070a;--card:#0b1218;--ink:#e6f6fa;--mut:#7f9aa5;--line:#17323c;--acc:#00e5ff;--accink:#021014;--ok:#3dffb0;--bad:#ff4d6d;--soft:#0e2a33;--glow:0 0 14px rgba(0,229,255,.45);
+--head:"Chakra Petch","Segoe UI",system-ui,sans-serif;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box;min-width:0}html{scroll-padding-top:env(safe-area-inset-top,0px);height:100%;-webkit-text-size-adjust:100%}
+body{margin:0;min-height:100%;overflow-x:hidden;background:radial-gradient(120% 60% at 50% -10%,#08222b 0,var(--bg) 60%) fixed var(--bg);color:var(--ink);font:16px/1.4 "Segoe UI",system-ui,-apple-system,Roboto,sans-serif}
+.wrap{max-width:720px;margin:0 auto;padding:16px 14px 110px;width:100%}
+h1{font:700 24px/1.1 var(--head);margin:6px 0 16px;color:var(--acc);text-shadow:0 0 6px rgba(0,229,255,.8),0 0 22px rgba(0,229,255,.5);letter-spacing:.5px}
+h1 small{display:block;font:500 13px var(--head);color:var(--mut);text-shadow:none;margin-top:4px;letter-spacing:.3px}
+h2{font:700 17px var(--head);margin:0 0 10px}
 nav{display:flex;gap:6px;background:var(--card);padding:5px;border-radius:12px;border:1px solid var(--line);margin-bottom:14px}
-nav button{flex:1;padding:10px;border:0;background:none;color:var(--mut);font:inherit;font-weight:600;border-radius:8px;cursor:pointer}
-nav button.on{background:var(--acc);color:var(--accink)}
-.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:14px}
-label{display:block;font-size:13px;color:var(--mut);margin-bottom:3px}
-input,select,textarea{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 10px}
-input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
-.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
-.den{display:grid;grid-template-columns:70px 1fr 90px;gap:8px;align-items:center;margin-bottom:6px}
-.den b{font-variant-numeric:tabular-nums}.den span{text-align:right;color:var(--mut);font-variant-numeric:tabular-nums}
-.tot{display:flex;justify-content:space-between;align-items:baseline;padding-top:10px;margin-top:6px;border-top:1px solid var(--line);font-weight:700}
-.tot big{font-size:24px;font-variant-numeric:tabular-nums}
-.res{display:flex;justify-content:space-between;padding:4px 0}.ok{color:var(--ok)}.bad{color:var(--bad)}
-.cat{font-size:13px;font-weight:700;color:var(--acc);margin:12px 0 6px}
+nav button{flex:1;padding:10px 4px;border:0;background:none;color:var(--mut);font:600 15px var(--head);border-radius:8px;cursor:pointer}
+nav button.on{background:var(--acc);color:var(--accink);box-shadow:var(--glow)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:14px;overflow:hidden}
+label{display:block;font-size:13px;color:var(--mut);margin-bottom:4px}
+input,select,textarea{display:block;width:100%;max-width:100%;font:inherit;font-size:16px;color:var(--ink);background:#060c10;border:1px solid var(--line);border-radius:8px;padding:10px;-webkit-appearance:none;appearance:none}
+input[type=datetime-local]{min-height:44px}
+input:focus,select:focus,textarea:focus{outline:0;border-color:var(--acc);box-shadow:var(--glow)}
+button:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.g2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.cash{font:700 28px var(--head)!important;color:var(--acc);text-shadow:0 0 10px rgba(0,229,255,.4)}
+.res{display:flex;justify-content:space-between;gap:10px;padding:5px 0}.ok{color:var(--ok)}.bad{color:var(--bad)}
+.res.big{border-top:1px solid var(--line);margin-top:4px;padding-top:10px;font:700 18px var(--head)}
+.cat{font:700 14px var(--head);color:var(--acc);margin:14px 0 4px;text-shadow:0 0 8px rgba(0,229,255,.4)}
 .irow{padding:10px 0;border-top:1px solid var(--line)}
-.irow .nm{display:flex;justify-content:space-between;font-weight:600;margin-bottom:6px}
-.irow .nm span{font-weight:500;color:var(--mut);font-variant-numeric:tabular-nums}
-.btn{border:0;border-radius:10px;padding:12px 16px;font:inherit;font-weight:700;cursor:pointer;background:var(--acc);color:var(--accink)}
-.btn.s{background:var(--soft);color:var(--acc)}.btn.d{background:none;color:var(--bad);padding:6px 10px}
-.bar{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px));display:flex;gap:10px;justify-content:center}
-.bar .btn{flex:1;max-width:340px}
+.irow .nm{display:flex;justify-content:space-between;gap:8px;font-weight:600;margin-bottom:6px}
+.irow .nm span{font-weight:500;color:var(--ok)}
+.btn{border:0;border-radius:10px;padding:13px 14px;font:700 16px var(--head);cursor:pointer;background:var(--acc);color:var(--accink);box-shadow:var(--glow)}
+.btn.s{background:var(--soft);color:var(--acc);box-shadow:none}.btn.d{background:none;color:var(--bad);padding:8px 10px;box-shadow:none}
+.bar{position:fixed;left:0;right:0;bottom:0;background:rgba(5,7,10,.94);border-top:1px solid var(--line);padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px));display:flex;gap:10px;justify-content:center;z-index:5}
+.bar:empty{display:none}.bar .btn{flex:1;max-width:340px}.bar .btn.s{flex:0 0 auto}
 .hist{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 0;border-top:1px solid var(--line);cursor:pointer}
-.hist:first-of-type{border-top:0}.hist small{color:var(--mut)}
-pre{white-space:pre-wrap;word-break:break-word;font:14px/1.5 ui-monospace,Consolas,monospace;background:var(--bg);padding:12px;border-radius:8px;border:1px solid var(--line);overflow-x:auto}
+.hist:first-child{border-top:0}.hist small{color:var(--mut)}
+pre{white-space:pre-wrap;word-break:break-word;font:14px/1.5 ui-monospace,Consolas,monospace;background:#060c10;padding:12px;border-radius:8px;border:1px solid var(--line);margin:0}
 .empty{color:var(--mut);text-align:center;padding:24px 8px}
-.toast{position:fixed;left:50%;bottom:80px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;z-index:9}
-.erow{display:grid;grid-template-columns:1fr 80px 36px;gap:6px;margin-bottom:6px}
+.toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:var(--acc);color:var(--accink);padding:10px 16px;border-radius:10px;font:700 15px var(--head);z-index:9;box-shadow:var(--glow);white-space:nowrap}
+.erow{display:grid;grid-template-columns:minmax(0,1fr) 84px 44px;gap:6px;margin-bottom:8px}
+.erow .btn{padding:0}
 </style>
 </head>
 <body>
 <div class="wrap">
-<h1>Win Streak · отчёт смены</h1>
+<h1>WIN STREAK<small>отчёт смены</small></h1>
 <nav id="nav"><button data-t="shift" class="on">Смена</button><button data-t="hist">История</button><button data-t="items">Товары</button></nav>
 <main id="v"></main>
 </div>
@@ -68,7 +70,7 @@ function newDraft(){
   const last=reports[0],prev={};
   if(last)last.items.forEach(i=>prev[i.name]=i.end);
   return{date:nowLocal(),admin:last?last.admin:"",shift:"Дневная",cash:"",float:last?last.float:0,system:"",note:"",
-    inv:Object.fromEntries(items.map(i=>[i.id,{s:prev[i.name]??"",in:"",e:""}]))};
+    inv:Object.fromEntries(items.map(i=>[i.id,{s:prev[i.name]??"",e:""}]))};
 }
 if(!draft)draft=newDraft();
 const save=()=>sv("ws_draft",draft);
@@ -77,8 +79,8 @@ function calc(){
   return{total,exp,diff:total-exp};
 }
 function itemRows(){
-  return items.map(i=>{const r=draft.inv[i.id]||(draft.inv[i.id]={s:"",in:"",e:""});
-    const sold=num(r.s)+num(r.in)-num(r.e);return{...i,start:num(r.s),in:num(r.in),end:num(r.e),sold,filled:r.e!==""}});
+  return items.map(i=>{const r=draft.inv[i.id]||(draft.inv[i.id]={s:"",e:""});
+    const sold=num(r.s)-num(r.e);return{...i,start:num(r.s),end:num(r.e),sold,filled:r.e!==""}});
 }
 function render(){
   document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("on",b.dataset.t===tab));
@@ -89,16 +91,15 @@ function viewShift(){
   let h=`<div class="card"><div class="g2"><div><label>Дата и время</label><input type="datetime-local" data-f="date" value="${draft.date}"></div>
   <div><label>Смена</label><select data-f="shift">${["Дневная","Ночная"].map(s=>`<option${draft.shift===s?" selected":""}>${s}</option>`).join("")}</select></div></div>
   <div style="margin-top:10px"><label>Администратор</label><input data-f="admin" value="${esc(draft.admin)}" placeholder="Имя"></div></div>`;
-  h+=`<div class="card"><h2>Касса</h2><label>Итоговая сумма наличных в кассе, ₽</label><input type="number" inputmode="numeric" min="0" data-f="cash" value="${draft.cash??""}" placeholder="0" style="font-size:22px;font-weight:700"></div>`;
+  h+=`<div class="card"><h2>Касса</h2><label>Итоговая сумма наличных в кассе, ₽</label><input type="number" inputmode="numeric" min="0" data-f="cash" value="${draft.cash??""}" placeholder="0" class="cash"></div>`;
   h+=`<div class="card"><h2>Сверка</h2><div class="g2"><div><label>Размен на начало смены, ₽</label><input type="number" inputmode="numeric" data-f="float" value="${draft.float}"></div>
   <div><label>Наличные по системе, ₽</label><input type="number" inputmode="numeric" data-f="system" value="${draft.system}" placeholder="из программы клуба"></div></div>
   <div id="rec" style="margin-top:10px"></div></div>`;
-  h+=`<div class="card"><h2>Остатки в холодильниках</h2><label>Начало подтянулось из прошлой смены. Введите приход и остаток на конец.</label>`;
+  h+=`<div class="card"><h2>Остатки в холодильниках</h2><label>Количество на начало смены подтянулось из прошлого отчёта. В конце смены впишите остаток.</label>`;
   cats.forEach(cat=>{h+=`<div class="cat">${esc(cat)}</div>`;
     itemRows().filter(i=>i.cat===cat).forEach(i=>{h+=`<div class="irow"><div class="nm">${esc(i.name)}<span id="sd${i.id}">${i.filled?"продано "+i.sold:""}</span></div>
-    <div class="g3"><div><label>Начало</label><input type="number" inputmode="numeric" min="0" data-i="${i.id}" data-k="s" value="${draft.inv[i.id].s}"></div>
-    <div><label>Приход</label><input type="number" inputmode="numeric" min="0" data-i="${i.id}" data-k="in" value="${draft.inv[i.id].in}"></div>
-    <div><label>Остаток</label><input type="number" inputmode="numeric" min="0" data-i="${i.id}" data-k="e" value="${draft.inv[i.id].e}"></div></div></div>`})});
+    <div class="g2"><div><label>На начало смены</label><input type="number" inputmode="numeric" min="0" data-i="${i.id}" data-k="s" value="${draft.inv[i.id].s}"></div>
+    <div><label>Остаток на конец</label><input type="number" inputmode="numeric" min="0" data-i="${i.id}" data-k="e" value="${draft.inv[i.id].e}"></div></div></div>`})});
   h+=`</div><div class="card"><label>Заметка по смене</label><textarea rows="2" data-f="note" placeholder="Что сломалось, что докупить…">${esc(draft.note)}</textarea></div>`;
   $("#v").innerHTML=h;
   $("#bar").innerHTML=`<button class="btn s" id="reset">Очистить</button><button class="btn" id="fin">Закрыть смену</button>`;
@@ -107,17 +108,17 @@ function viewShift(){
 function paintRec(){
   const c=calc(),el=$("#rec");if(!el)return;
   const cls=c.diff===0?"ok":"bad",txt=c.diff===0?"Сходится":c.diff>0?"Излишек":"Недостача";
-  el.innerHTML=`<div class="res"><span>Должно быть в кассе</span><b>${rub(c.exp)}</b></div><div class="res"><span>По факту</span><b>${rub(c.total)}</b></div><div class="res ${cls}"><span>${txt}</span><b>${c.diff>0?"+":""}${rub(c.diff)}</b></div>`;
+  el.innerHTML=`<div class="res"><span>Должно быть в кассе</span><b>${rub(c.exp)}</b></div><div class="res"><span>По факту</span><b>${rub(c.total)}</b></div><div class="res big ${cls}"><span>${txt}</span><b>${c.diff>0?"+":""}${rub(c.diff)}</b></div>`;
 }
 function snapshot(){
   const c=calc(),rows=itemRows();
   return{id:Date.now(),date:draft.date,admin:draft.admin.trim()||"—",shift:draft.shift,total:c.total,float:num(draft.float),system:num(draft.system),exp:c.exp,diff:c.diff,note:draft.note.trim(),
-    items:rows.map(r=>({name:r.name,cat:r.cat,price:r.price,start:r.start,in:r.in,end:r.end,sold:r.sold}))};
+    items:rows.map(r=>({name:r.name,cat:r.cat,price:r.price,start:r.start,end:r.end,sold:r.sold}))};
 }
 function report(r){
   let t=`Win Streak — смена ${r.shift.toLowerCase()}\n${fmt(r.date)}\nАдминистратор: ${r.admin}\n\nКАССА\nПо факту: ${rub(r.total)}\nРазмен на начало: ${rub(r.float)}\nНаличные по системе: ${rub(r.system)}\nДолжно быть: ${rub(r.exp)}\n${r.diff===0?"Сходится":(r.diff>0?"Излишек: +":"Недостача: ")+rub(r.diff)}\n`;
-  [...new Set(r.items.map(i=>i.cat))].forEach(cat=>{t+=`\n${cat.toUpperCase()} (нач / приход / ост / продано)\n`;
-    r.items.filter(i=>i.cat===cat).forEach(i=>t+=`${i.name}: ${i.start} / ${i.in} / ${i.end} / ${i.sold}\n`)});
+  [...new Set(r.items.map(i=>i.cat))].forEach(cat=>{t+=`\n${cat.toUpperCase()} (на начало / остаток / продано)\n`;
+    r.items.filter(i=>i.cat===cat).forEach(i=>t+=`${i.name}: ${i.start} / ${i.end} / ${i.sold}\n`)});
   const sum=r.items.reduce((a,i)=>a+Math.max(0,i.sold)*i.price,0);
   if(sum>0)t+=`\nТовары проданы на ≈ ${rub(sum)}\n`;
   if(r.note)t+=`\nЗаметка: ${r.note}\n`;
@@ -147,7 +148,7 @@ function toast(m){const d=document.createElement("div");d.className="toast";d.te
 document.addEventListener("input",e=>{
   const t=e.target;
   if(t.dataset.f){draft[t.dataset.f]=t.value;save();if(["float","system","cash"].includes(t.dataset.f))paintRec()}
-  else if(t.dataset.i){draft.inv[t.dataset.i][t.dataset.k]=t.value;save();const r=draft.inv[t.dataset.i];$("#sd"+t.dataset.i).textContent=r.e!==""?"продано "+(num(r.s)+num(r.in)-num(r.e)):""}
+  else if(t.dataset.i){draft.inv[t.dataset.i][t.dataset.k]=t.value;save();const r=draft.inv[t.dataset.i];$("#sd"+t.dataset.i).textContent=r.e!==""?"продано "+(num(r.s)-num(r.e)):""}
   else if(t.dataset.e){const it=items.find(x=>x.id==t.dataset.e);it[t.dataset.k]=t.dataset.k==="price"?num(t.value):t.value;sv("ws_items2",items)}
 });
 document.addEventListener("click",e=>{
