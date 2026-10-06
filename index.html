@@ -41,7 +41,8 @@ button:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
 pre{white-space:pre-wrap;word-break:break-word;font:14px/1.5 ui-monospace,Consolas,monospace;background:#060c10;padding:12px;border-radius:8px;border:1px solid var(--line);margin:0}
 .empty{color:var(--mut);text-align:center;padding:24px 8px}
 .toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:var(--acc);color:var(--accink);padding:10px 16px;border-radius:10px;font:700 15px var(--head);z-index:9;box-shadow:var(--glow);white-space:nowrap}
-.erow{display:grid;grid-template-columns:minmax(0,1fr) 84px 44px;gap:6px;margin-bottom:8px}
+.erow{display:grid;grid-template-columns:minmax(0,1fr) 108px 44px;gap:6px;margin-bottom:8px}
+.pr{position:relative}.pr input{padding-right:28px;text-align:right}.pr span{position:absolute;right:11px;top:50%;transform:translateY(-50%);color:var(--mut);pointer-events:none}
 .erow .btn{padding:0}
 </style>
 </head>
@@ -60,7 +61,7 @@ pre{white-space:pre-wrap;word-break:break-word;font:14px/1.5 ui-monospace,Consol
 const FIREBASE_CONFIG={apiKey:"AIzaSyAKyk1XIPGPijv5NXBw6WioX8cz84HopzI",authDomain:"winstreakpcclub.firebaseapp.com",projectId:"winstreakpcclub",storageBucket:"winstreakpcclub.firebasestorage.app",messagingSenderId:"1031724956829",appId:"1:1031724956829:web:8e22a550c225fd1109e874"};
 </script>
 <script>
-const DEF=[["Энергетики","Адреналин",0],["Энергетики","Монстр",0],["Напитки","Фанта",0],["Напитки","Маунти Дью",0],["Напитки","Липтон",0],["Напитки","Вода",0],["Еда","Багет",0],["Еда","Шаурма",0],["Еда","Сэндвич",0]];
+const DEF=[["Энергетики","Адреналин",200],["Энергетики","Монстр",300],["Напитки","Фанта",220],["Напитки","Маунти Дью",0],["Напитки","Липтон",140],["Напитки","Кола",140],["Напитки","Вода",100],["Еда","Багет",170],["Еда","Шаурма",230],["Еда","Сэндвич",200]];
 const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const rub=n=>(Math.round(n)||0).toLocaleString("ru-RU")+" ₽";
@@ -86,7 +87,12 @@ function newDraft(){
 if(!draft)draft=newDraft();
 const save=()=>sv("ws_draft",draft);
 function saveItems(){sv("ws_items2",items);if(CLOUD&&authed){clearTimeout(tm);tm=setTimeout(pushItems,600)}}
-function pushItems(){col("meta").doc("items").set({list:items}).catch(()=>{})}
+const PRICES={"Адреналин":200,"Фанта":220,"Багет":170,"Сэндвич":200,"Липтон":140,"Вода":100,"Кола":140,"Монстр":300,"Шаурма":230};
+function migrate(){
+  items.forEach(i=>{if(!i.price&&PRICES[i.name])i.price=PRICES[i.name]});
+  if(!items.some(i=>i.name==="Кола"))items.push({id:Date.now(),cat:"Напитки",name:"Кола",price:140});
+}
+function pushItems(){col("meta").doc("items").set({list:items,v:2}).catch(()=>{})}
 function prefill(){const last=reports[0];if(!last)return;const prev={};last.items.forEach(i=>prev[i.name]=i.end);
   items.forEach(i=>{const r=draft.inv[i.id];if(r&&!r.t&&prev[i.name]!==undefined)r.s=prev[i.name]})}
 function refresh(){prefill();const a=document.activeElement;if(a&&/INPUT|TEXTAREA|SELECT/.test(a.tagName))return;render()}
@@ -102,7 +108,7 @@ async function connect(c){
 function listen(){
   unsubs.forEach(f=>f());unsubs=[];
   unsubs.push(col("meta").doc("items").onSnapshot(d=>{
-    if(d.exists&&d.data().list){items=d.data().list;sv("ws_items2",items);refresh()}else if(!d.exists)pushItems()},onErr));
+    if(d.exists&&d.data().list){items=d.data().list;if((d.data().v||0)<2){migrate();pushItems()}sv("ws_items2",items);refresh()}else if(!d.exists){migrate();pushItems()}},onErr));
   unsubs.push(col("reports").orderBy("date","desc").limit(100).onSnapshot(q=>{reports=q.docs.map(x=>x.data());refresh()},onErr));
 }
 function saveReport(r){
@@ -128,7 +134,7 @@ function render(){
 }
 function viewShift(){
   const c=calc(),cats=[...new Set(items.map(i=>i.cat))];
-  let h=`<div class="card"><div class="g2"><div><label>Дата и время</label><input type="datetime-local" data-f="date" value="${draft.date}"></div>
+  let h=`<div class="card"><div class="g2" style="grid-template-columns:minmax(0,1fr)"><div><label>Дата и время</label><input type="datetime-local" data-f="date" value="${draft.date}"></div>
   <div><label>Смена</label><select data-f="shift">${["Дневная","Ночная"].map(s=>`<option${draft.shift===s?" selected":""}>${s}</option>`).join("")}</select></div></div>
   <div style="margin-top:10px"><label>Администратор</label><input data-f="admin" value="${esc(draft.admin)}" placeholder="Имя"></div></div>`;
   h+=`<div class="card"><h2>Касса</h2><label>Итоговая сумма наличных в кассе, ₽</label><input type="number" inputmode="numeric" min="0" data-f="cash" value="${draft.cash??""}" placeholder="0" class="cash"></div>`;
@@ -176,9 +182,11 @@ function viewHist(){
 }
 function viewItems(){
   $("#bar").innerHTML="";
-  let h=`<div class="card"><h2>Список товаров</h2><label>Название · цена, ₽. Укажите цены, чтобы в отчёте считалась сумма продаж.</label><div style="margin-top:8px">`;
-  items.forEach(i=>h+=`<div class="erow"><input data-e="${i.id}" data-k="name" value="${esc(i.name)}"><input type="number" inputmode="numeric" data-e="${i.id}" data-k="price" value="${i.price}"><button class="btn d" data-x="${i.id}" aria-label="Удалить">✕</button></div>`);
-  h+=`</div></div><div class="card"><h2>Добавить товар</h2><div class="g2"><div><label>Категория</label><select id="nc"><option>Энергетики</option><option>Напитки</option><option>Еда</option><option>Другое</option></select></div><div><label>Название</label><input id="nn"></div></div><button class="btn" id="add" style="margin-top:10px">Добавить</button></div>`+(CLOUD?`<div class="card"><button class="btn s" id="lo" style="width:100%">Выйти из общей базы</button></div>`:"");
+  const cats=[...new Set(items.map(i=>i.cat))],all=[...new Set([...cats,"Энергетики","Напитки","Еда"])];
+  let h=`<div class="card"><h2>Товары и цены</h2><label>Название и цену можно менять прямо в списке, изменения сохраняются сами.</label>`;
+  cats.forEach(c=>{h+=`<div class="cat">${esc(c)}</div>`;
+    items.filter(i=>i.cat===c).forEach(i=>h+=`<div class="erow"><input data-e="${i.id}" data-k="name" value="${esc(i.name)}" aria-label="Название"><div class="pr"><input type="number" inputmode="numeric" min="0" data-e="${i.id}" data-k="price" value="${i.price||""}" placeholder="0" aria-label="Цена"><span>₽</span></div><button class="btn d" data-x="${i.id}" aria-label="Удалить ${esc(i.name)}">✕</button></div>`)});
+  h+=`</div><div class="card"><h2>Добавить товар</h2><div class="g2"><div><label>Категория</label><select id="nc">${all.map(c=>`<option>${esc(c)}</option>`).join("")}</select></div><div><label>Цена, ₽</label><input id="np" type="number" inputmode="numeric" min="0" placeholder="0"></div></div><div style="margin-top:10px"><label>Название</label><input id="nn"></div><button class="btn" id="add" style="margin-top:10px;width:100%">Добавить</button></div>`+(CLOUD?`<div class="card"><button class="btn s" id="lo" style="width:100%">Выйти из общей базы</button></div>`:"");
   $("#v").innerHTML=h;
 }
 function copy(t){
@@ -209,9 +217,10 @@ document.addEventListener("click",e=>{
     tab="hist";open=r.id;render();toast("Смена сохранена");
   }
   else if(t.dataset.x){if(confirm("Удалить товар из списка? В старых отчётах он останется.")){items=items.filter(i=>i.id!=t.dataset.x);saveItems();viewItems()}}
-  else if(t.id==="add"){const n=$("#nn").value.trim();if(!n)return;items.push({id:Date.now(),cat:$("#nc").value,name:n,price:0});saveItems();draft.inv=draft.inv||{};viewItems()}
+  else if(t.id==="add"){const n=$("#nn").value.trim();if(!n)return;items.push({id:Date.now(),cat:$("#nc").value,name:n,price:num($("#np").value)});saveItems();draft.inv=draft.inv||{};viewItems()}
 });
 document.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.id==="cd")connect(e.target.value)});
+if(!CLOUD&&ld("ws_items_v",0)<2){migrate();sv("ws_items_v",2);sv("ws_items2",items)}
 if(CLOUD&&code)connect(code);else render();
 </script>
 </body>
