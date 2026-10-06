@@ -16,7 +16,7 @@ h1{font:700 24px/1.1 var(--head);margin:6px 0 16px;color:var(--acc);text-shadow:
 h1 small{display:block;font:500 13px var(--head);color:var(--mut);text-shadow:none;margin-top:4px;letter-spacing:.3px}
 h2{font:700 17px var(--head);margin:0 0 10px}
 nav{display:flex;gap:6px;background:var(--card);padding:5px;border-radius:12px;border:1px solid var(--line);margin-bottom:14px}
-nav button{flex:1;padding:10px 4px;border:0;background:none;color:var(--mut);font:600 15px var(--head);border-radius:8px;cursor:pointer}
+nav button{flex:1;padding:10px 4px;border:0;background:none;color:var(--mut);font:600 14px var(--head);border-radius:8px;cursor:pointer}
 nav button.on{background:var(--acc);color:var(--accink);box-shadow:var(--glow)}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:14px;overflow:hidden}
 label{display:block;font-size:13px;color:var(--mut);margin-bottom:4px}
@@ -44,17 +44,25 @@ pre{white-space:pre-wrap;word-break:break-word;font:14px/1.5 ui-monospace,Consol
 .erow{display:grid;grid-template-columns:minmax(0,1fr) 108px 44px;gap:6px;margin-bottom:8px}
 .pr{position:relative}.pr input{padding-right:28px;text-align:right}.pr span{position:absolute;right:11px;top:50%;transform:translateY(-50%);color:var(--mut);pointer-events:none}
 .erow .btn{padding:0}
+#who{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:-6px 0 12px;font-size:13px;color:var(--mut)}
+#who:empty{display:none}#who button{background:none;border:1px solid var(--line);color:var(--acc);border-radius:8px;padding:6px 12px;font:600 13px var(--head);cursor:pointer}
+.seg{display:flex;gap:6px;margin-bottom:8px}.seg button{flex:1;padding:10px 4px;border:1px solid var(--line);background:var(--card);color:var(--mut);border-radius:10px;font:600 13px var(--head);cursor:pointer}
+.seg button.on{border-color:var(--acc);color:var(--acc);box-shadow:var(--glow)}
+.rng{text-align:center;color:var(--mut);margin-bottom:12px;font:500 14px var(--head)}
+.day h2{margin-bottom:8px}.day.today{border-color:var(--acc);box-shadow:var(--glow)}
+.val{padding:10px 0;min-height:44px;font-weight:600;word-break:break-word}
 </style>
 </head>
 <body>
 <div class="wrap">
-<h1>WIN STREAK<small>отчёт смены</small></h1>
-<nav id="nav"><button data-t="shift" class="on">Смена</button><button data-t="hist">История</button><button data-t="items">Товары</button></nav>
+<h1>WIN STREAK<small>рабочая панель клуба</small></h1><div id="who"></div>
+<nav id="nav"><button data-t="shift" class="on">Смена</button><button data-t="sched">График</button><button data-t="hist">История</button><button data-t="items">Товары</button></nav>
 <main id="v"></main>
 </div>
 <div class="bar" id="bar"></div>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script>
 // ВСТАВЬТЕ СЮДА ДАННЫЕ ИЗ FIREBASE (Project settings → Your apps → firebaseConfig).
 // Пока apiKey пустой, приложение работает локально, без общей базы.
@@ -71,9 +79,13 @@ function sv(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
 let items=ld("ws_items2",null)||DEF.map((x,i)=>({id:i+1,cat:x[0],name:x[1],price:x[2]}));
 const CLOUD=!!(window.firebase&&FIREBASE_CONFIG.apiKey);
 let reports=CLOUD?[]:ld("ws_reports",[]);
-let db=null,code=ld("ws_code",""),authed=!CLOUD,unsubs=[],loginErr="",tm;
+let db=null,auth=null,me=CLOUD?null:{name:"",role:"owner"},authed=!CLOUD,booting=CLOUD,unsubs=[],loginErr="",tm,tms,pendI=false,pendS=false;
+let sched=CLOUD?{}:ld("ws_sched",{}),wk=0;const dirty=new Set();
 const cache=()=>{if(!CLOUD)sv("ws_reports",reports)};
-const col=n=>db.collection("clubs").doc(code).collection(n);
+const col=n=>db.collection("clubs").doc("streak77").collection(n);
+const USERS={"killsouthgarden":{e:"killsouthgarden@winstreak.app",role:"owner",name:"killsouthgarden"},"shak2o":{e:"shak2o@winstreak.app",role:"admin",name:"shak2o"},"администратор":{e:"admin@winstreak.app",role:"staff",name:"Администратор"}};
+const ROLE={owner:"главный админ",admin:"админ",staff:"сотрудник"};
+const canEdit=()=>!!me&&me.role!=="staff";
 let draft=ld("ws_draft",null);
 let tab="shift",open=null;
 const nowLocal=()=>{const d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,16)};
@@ -81,35 +93,44 @@ function fmt(iso){const d=new Date(iso);return d.toLocaleDateString("ru-RU",{day
 function newDraft(){
   const last=reports[0],prev={};
   if(last)last.items.forEach(i=>prev[i.name]=i.end);
-  return{date:nowLocal(),admin:last?last.admin:"",shift:"Дневная",cash:"",float:last?last.float:0,system:"",note:"",
+  return{date:nowLocal(),admin:(me&&me.name)||(last?last.admin:""),shift:"Дневная",cash:"",float:last?last.float:0,system:"",note:"",
     inv:Object.fromEntries(items.map(i=>[i.id,{s:prev[i.name]??"",e:""}]))};
 }
 if(!draft)draft=newDraft();
 const save=()=>sv("ws_draft",draft);
-function saveItems(){sv("ws_items2",items);if(CLOUD&&authed){clearTimeout(tm);tm=setTimeout(pushItems,600)}}
+function saveItems(){sv("ws_items2",items);if(CLOUD&&authed&&canEdit()){pendI=true;clearTimeout(tm);tm=setTimeout(pushItems,600)}}
 const PRICES={"Адреналин":200,"Фанта":220,"Багет":170,"Сэндвич":200,"Липтон":140,"Вода":100,"Кола":140,"Монстр":300,"Шаурма":230};
 function migrate(){
   items.forEach(i=>{if(!i.price&&PRICES[i.name])i.price=PRICES[i.name]});
   if(!items.some(i=>i.name==="Кола"))items.push({id:Date.now(),cat:"Напитки",name:"Кола",price:140});
 }
-function pushItems(){col("meta").doc("items").set({list:items,v:2}).catch(()=>{})}
+function pushItems(){col("meta").doc("items").set({list:items,v:2}).catch(()=>{}).then(()=>{pendI=false})}
 function prefill(){const last=reports[0];if(!last)return;const prev={};last.items.forEach(i=>prev[i.name]=i.end);
   items.forEach(i=>{const r=draft.inv[i.id];if(r&&!r.t&&prev[i.name]!==undefined)r.s=prev[i.name]})}
 function refresh(){prefill();const a=document.activeElement;if(a&&/INPUT|TEXTAREA|SELECT/.test(a.tagName))return;render()}
-function onErr(e){if(e&&e.code==="permission-denied"){authed=false;sv("ws_code","");loginErr="Код не подходит";render()}}
-async function connect(c){
-  c=String(c).trim().toLowerCase();if(!c)return;
-  try{
-    if(!db){firebase.initializeApp(FIREBASE_CONFIG);db=firebase.firestore()}
-    code=c;await col("meta").doc("items").get();
-    sv("ws_code",c);authed=true;loginErr="";listen();render();
-  }catch(e){authed=false;loginErr=e.code==="permission-denied"?"Неверный код":"Нет связи с базой. Проверьте интернет и настройки Firebase.";render()}
+function onErr(e){if(e&&e.code==="permission-denied")toast("Нет доступа к базе. Проверьте правила Firebase")}
+function initFb(){if(!db){firebase.initializeApp(FIREBASE_CONFIG);db=firebase.firestore();auth=firebase.auth()}}
+async function login(nick,pass){
+  const u=USERS[String(nick).trim().toLowerCase()];
+  if(!u||!pass){loginErr="Неверный ник или пароль";render();return}
+  try{initFb();await auth.signInWithEmailAndPassword(u.e,pass)}
+  catch(e){const c=e.code||"";loginErr=/invalid|wrong|not-found|credential/.test(c)?"Неверный ник или пароль":c==="auth/operation-not-allowed"?"В Firebase не включён вход по почте и паролю":c==="auth/too-many-requests"?"Слишком много попыток, подождите минуту":"Нет связи с базой. Проверьте интернет";render()}
+}
+function startAuth(){
+  initFb();
+  auth.onAuthStateChanged(u=>{
+    booting=false;const info=u&&Object.values(USERS).find(x=>x.e===u.email);
+    if(info){me=info;authed=true;loginErr="";draft.admin=info.name;save();listen();render()}
+    else{unsubs.forEach(f=>f());unsubs=[];me=null;authed=false;reports=[];sched={};render()}
+  });
 }
 function listen(){
   unsubs.forEach(f=>f());unsubs=[];
-  unsubs.push(col("meta").doc("items").onSnapshot(d=>{
-    if(d.exists&&d.data().list){items=d.data().list;if((d.data().v||0)<2){migrate();pushItems()}sv("ws_items2",items);refresh()}else if(!d.exists){migrate();pushItems()}},onErr));
+  unsubs.push(col("meta").doc("items").onSnapshot(d=>{if(pendI)return;
+    if(d.exists&&d.data().list){items=d.data().list;if((d.data().v||0)<2&&canEdit()){migrate();pushItems()}sv("ws_items2",items);refresh()}
+    else if(!d.exists&&canEdit()){migrate();pushItems()}},onErr));
   unsubs.push(col("reports").orderBy("date","desc").limit(100).onSnapshot(q=>{reports=q.docs.map(x=>x.data());refresh()},onErr));
+  unsubs.push(col("schedule").orderBy("week","desc").limit(12).onSnapshot(q=>{if(pendS)return;sched={};q.docs.forEach(x=>{const v=x.data();sched[v.week]=v});refresh()},onErr));
 }
 function saveReport(r){
   if(CLOUD)col("reports").doc(String(r.id)).set(r).catch(()=>toast("Не удалось сохранить в облако"));
@@ -117,7 +138,7 @@ function saveReport(r){
 }
 function viewLogin(){
   $("#bar").innerHTML="";
-  $("#v").innerHTML=`<div class="card"><h2>Вход</h2><label>Код доступа клуба</label><input id="cd" type="password" autocomplete="off" autocapitalize="none"><div class="bad" style="margin-top:8px">${esc(loginErr)}</div><button class="btn" id="go" style="margin-top:10px;width:100%">Войти</button></div>`;
+  $("#v").innerHTML=booting?`<div class="empty">Загрузка…</div>`:`<div class="card"><h2>Вход</h2><label>Ник</label><input id="nk" autocomplete="username" autocapitalize="none"><label style="margin-top:10px">Пароль</label><input id="pw" type="password" autocomplete="current-password"><div class="bad" style="margin-top:8px">${esc(loginErr)}</div><button class="btn" id="go" style="margin-top:10px;width:100%">Войти</button></div>`;
 }
 function calc(){
   const total=num(draft.cash),exp=num(draft.float)+num(draft.system);
@@ -128,15 +149,18 @@ function itemRows(){
     const sold=num(r.s)-num(r.e);return{...i,start:num(r.s),end:num(r.e),sold,filled:r.e!==""}});
 }
 function render(){
-  $("#nav").style.display=authed?"":"none";if(!authed){viewLogin();return}
-  document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("on",b.dataset.t===tab));
-  if(tab==="shift")viewShift();else if(tab==="hist")viewHist();else viewItems();
+  $("#nav").style.display=authed?"":"none";
+  $("#who").innerHTML=authed&&CLOUD&&me?`<span>${esc(me.name)} · ${ROLE[me.role]}</span><button id="out">Выйти</button>`:"";
+  if(!authed){viewLogin();return}
+  if(tab==="items"&&!canEdit())tab="shift";
+  document.querySelectorAll("nav button").forEach(b=>{b.classList.toggle("on",b.dataset.t===tab);if(b.dataset.t==="items")b.style.display=canEdit()?"":"none"});
+  ({shift:viewShift,sched:viewSched,hist:viewHist,items:viewItems})[tab]();
 }
 function viewShift(){
   const c=calc(),cats=[...new Set(items.map(i=>i.cat))];
   let h=`<div class="card"><div class="g2" style="grid-template-columns:minmax(0,1fr)"><div><label>Дата и время</label><input type="datetime-local" data-f="date" value="${draft.date}"></div>
   <div><label>Смена</label><select data-f="shift">${["Дневная","Ночная"].map(s=>`<option${draft.shift===s?" selected":""}>${s}</option>`).join("")}</select></div></div>
-  <div style="margin-top:10px"><label>Администратор</label><input data-f="admin" value="${esc(draft.admin)}" placeholder="Имя"></div></div>`;
+  <div style="margin-top:10px"><label>Администратор</label><input data-f="admin" ${CLOUD?"readonly":""} value="${esc(draft.admin)}" placeholder="Имя"></div></div>`;
   h+=`<div class="card"><h2>Касса</h2><label>Итоговая сумма наличных в кассе, ₽</label><input type="number" inputmode="numeric" min="0" data-f="cash" value="${draft.cash??""}" placeholder="0" class="cash"></div>`;
   h+=`<div class="card"><h2>Сверка</h2><div class="g2"><div><label>Размен на начало смены, ₽</label><input type="number" inputmode="numeric" data-f="float" value="${draft.float}"></div>
   <div><label>Наличные по системе, ₽</label><input type="number" inputmode="numeric" data-f="system" value="${draft.system}" placeholder="из программы клуба"></div></div>
@@ -173,9 +197,9 @@ function report(r){
 function viewHist(){
   $("#bar").innerHTML="";
   if(open!==null){const r=reports.find(x=>x.id===open);if(r){
-    $("#v").innerHTML=`<div class="card"><pre>${esc(report(r))}</pre><div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button class="btn" id="cp">Копировать</button><button class="btn s" id="bk">Назад</button><button class="btn d" id="del">Удалить</button></div></div>`;
+    $("#v").innerHTML=`<div class="card"><pre>${esc(report(r))}</pre><div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button class="btn" id="cp">Копировать</button><button class="btn s" id="bk">Назад</button>${canEdit()?'<button class="btn d" id="del">Удалить</button>':""}</div></div>`;
     $("#cp").onclick=()=>copy(report(r));$("#bk").onclick=()=>{open=null;render()};
-    $("#del").onclick=()=>{if(confirm("Удалить этот отчёт?")){reports=reports.filter(x=>x.id!==r.id);cache();if(CLOUD)col("reports").doc(String(r.id)).delete();open=null;render()}};return}}
+    if($("#del"))$("#del").onclick=()=>{if(confirm("Удалить этот отчёт?")){reports=reports.filter(x=>x.id!==r.id);cache();if(CLOUD)col("reports").doc(String(r.id)).delete();open=null;render()}};return}}
   const old=CLOUD?ld("ws_reports",[]):[];
   const mg=old.length?`<div class="card"><label>В этом браузере остались отчёты, которых нет в общей базе: ${old.length}.</label><button class="btn s" id="mig" style="margin-top:8px;width:100%">Перенести в общую базу</button></div>`:"";
   $("#v").innerHTML=mg+(reports.length?`<div class="card">${reports.map(r=>`<div class="hist" data-r="${r.id}"><div><b>${fmt(r.date)}</b><br><small>${esc(r.admin)} · ${r.shift.toLowerCase()}</small></div><div style="text-align:right"><b>${rub(r.total)}</b><br><small class="${r.diff===0?"ok":"bad"}">${r.diff===0?"сходится":(r.diff>0?"+":"")+rub(r.diff)}</small></div></div>`).join("")}</div>`:`<div class="empty">Отчётов пока нет. Закройте первую смену — она появится здесь.</div>`);
@@ -186,7 +210,36 @@ function viewItems(){
   let h=`<div class="card"><h2>Товары и цены</h2><label>Название и цену можно менять прямо в списке, изменения сохраняются сами.</label>`;
   cats.forEach(c=>{h+=`<div class="cat">${esc(c)}</div>`;
     items.filter(i=>i.cat===c).forEach(i=>h+=`<div class="erow"><input data-e="${i.id}" data-k="name" value="${esc(i.name)}" aria-label="Название"><div class="pr"><input type="number" inputmode="numeric" min="0" data-e="${i.id}" data-k="price" value="${i.price||""}" placeholder="0" aria-label="Цена"><span>₽</span></div><button class="btn d" data-x="${i.id}" aria-label="Удалить ${esc(i.name)}">✕</button></div>`)});
-  h+=`</div><div class="card"><h2>Добавить товар</h2><div class="g2"><div><label>Категория</label><select id="nc">${all.map(c=>`<option>${esc(c)}</option>`).join("")}</select></div><div><label>Цена, ₽</label><input id="np" type="number" inputmode="numeric" min="0" placeholder="0"></div></div><div style="margin-top:10px"><label>Название</label><input id="nn"></div><button class="btn" id="add" style="margin-top:10px;width:100%">Добавить</button></div>`+(CLOUD?`<div class="card"><button class="btn s" id="lo" style="width:100%">Выйти из общей базы</button></div>`:"");
+  h+=`</div><div class="card"><h2>Добавить товар</h2><div class="g2"><div><label>Категория</label><select id="nc">${all.map(c=>`<option>${esc(c)}</option>`).join("")}</select></div><div><label>Цена, ₽</label><input id="np" type="number" inputmode="numeric" min="0" placeholder="0"></div></div><div style="margin-top:10px"><label>Название</label><input id="nn"></div><button class="btn" id="add" style="margin-top:10px;width:100%">Добавить</button></div>`+"";
+  $("#v").innerHTML=h;
+}
+const DAYS=["Пн","Вт","Ср","Чт","Пт","Сб","Вс"],MON=["янв","фев","мар","апр","мая","июн","июл","авг","сен","окт","ноя","дек"],WN=["Прошлая неделя","Эта неделя","Следующая неделя"];
+const pad=n=>String(n).padStart(2,"0"),keyOf=d=>d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+const blank=()=>Array.from({length:7},()=>({d:"",n:""}));
+function weekStart(o){const d=new Date();d.setHours(12,0,0,0);d.setDate(d.getDate()-((d.getDay()+6)%7)+o*7);return d}
+function putSched(doc){
+  doc.by=(me&&me.name)||"";sched[doc.week]=doc;if(!CLOUD)sv("ws_sched",sched);
+  if(CLOUD){pendS=true;dirty.add(doc.week);clearTimeout(tms);tms=setTimeout(()=>{
+    const ws=[...dirty];dirty.clear();
+    Promise.all(ws.map(w=>col("schedule").doc(w).set(sched[w]))).catch(()=>toast("Не удалось сохранить график")).then(()=>{pendS=false})},500)}
+}
+function viewSched(){
+  $("#bar").innerHTML="";
+  const st=weekStart(wk),key=keyOf(st),end=new Date(st);end.setDate(end.getDate()+6);
+  const doc=sched[key],ed=canEdit();
+  let h=`<div class="seg">${[-1,0,1].map(o=>`<button data-w="${o}" class="${o===wk?"on":""}">${WN[o+1]}</button>`).join("")}</div><div class="rng">${st.getDate()} ${MON[st.getMonth()]} – ${end.getDate()} ${MON[end.getMonth()]}</div>`;
+  if(!doc){
+    const canCopy=!!sched[keyOf(weekStart(wk-1))];
+    h+=`<div class="card empty">${wk<0?"Расписание на прошлую неделю отсутствует":wk===0?"Расписание на эту неделю ещё не составлено":"Расписание на следующую неделю ещё не составлено"}`;
+    if(ed&&wk>=0)h+=`<div style="display:grid;gap:8px;margin-top:14px"><button class="btn" id="newS">Составить расписание</button>${canCopy?'<button class="btn s" id="cpS">Скопировать с прошлой недели</button>':""}</div>`;
+    h+=`</div>`;
+  }else{
+    const today=keyOf(new Date());
+    h+=doc.days.map((dy,i)=>{const d=new Date(st);d.setDate(d.getDate()+i);const t=keyOf(d)===today;
+      const cell=(f,l)=>ed?`<div><label>${l}</label><input data-s="${i}" data-sf="${f}" value="${esc(dy[f])}" placeholder="Кто работает" autocomplete="off"></div>`:`<div><label>${l}</label><div class="val">${esc(dy[f])||"—"}</div></div>`;
+      return `<div class="card day${t?" today":""}"><h2>${DAYS[i]}, ${d.getDate()} ${MON[d.getMonth()]}${t?" · сегодня":""}</h2><div class="g2">${cell("d","День")}${cell("n","Ночь")}</div></div>`}).join("");
+    if(ed)h+=`<div class="card"><label>Изменения сохраняются сами${doc.by?`. Последняя правка: ${esc(doc.by)}`:""}.</label><button class="btn d" id="clrS" style="width:100%;margin-top:6px">Очистить неделю</button></div>`;
+  }
   $("#v").innerHTML=h;
 }
 function copy(t){
@@ -199,16 +252,21 @@ document.addEventListener("input",e=>{
   const t=e.target;
   if(t.dataset.f){draft[t.dataset.f]=t.value;save();if(["float","system","cash"].includes(t.dataset.f))paintRec()}
   else if(t.dataset.i){draft.inv[t.dataset.i][t.dataset.k]=t.value;if(t.dataset.k==="s")draft.inv[t.dataset.i].t=1;save();const r=draft.inv[t.dataset.i];$("#sd"+t.dataset.i).textContent=r.e!==""?"продано "+(num(r.s)-num(r.e)):""}
+  else if(t.dataset.s!==undefined){const dc=sched[keyOf(weekStart(wk))];if(dc){dc.days[t.dataset.s][t.dataset.sf]=t.value;putSched(dc)}}
   else if(t.dataset.e){const it=items.find(x=>x.id==t.dataset.e);it[t.dataset.k]=t.dataset.k==="price"?num(t.value):t.value;saveItems()}
 });
 document.addEventListener("click",e=>{
   const t=e.target.closest("button,.hist");if(!t)return;
   if(t.dataset.t){tab=t.dataset.t;open=null;render()}
+  else if(t.dataset.w!==undefined){wk=+t.dataset.w;render()}
+  else if(t.id==="newS"){putSched({week:keyOf(weekStart(wk)),days:blank()});render()}
+  else if(t.id==="cpS"){putSched({week:keyOf(weekStart(wk)),days:JSON.parse(JSON.stringify(sched[keyOf(weekStart(wk-1))].days))});render()}
+  else if(t.id==="clrS"){if(confirm("Очистить расписание этой недели?")){putSched({week:keyOf(weekStart(wk)),days:blank()});render()}}
   else if(t.dataset.r){open=+t.dataset.r;render()}
-  else if(t.id==="go")connect($("#cd").value)
+  else if(t.id==="go")login($("#nk").value,$("#pw").value)
   else if(t.id==="mig"){const b=db.batch();ld("ws_reports",[]).forEach(r=>b.set(col("reports").doc(String(r.id)),r));
     b.commit().then(()=>{sv("ws_reports",[]);toast("Отчёты перенесены");render()},()=>toast("Не удалось перенести"))}
-  else if(t.id==="lo"){unsubs.forEach(f=>f());unsubs=[];sv("ws_code","");authed=false;reports=[];render()}
+  else if(t.id==="out"){auth.signOut()}
   else if(t.id==="reset"){if(confirm("Очистить введённые данные смены?")){draft=newDraft();save();render()}}
   else if(t.id==="fin"){
     const missing=itemRows().filter(i=>!i.filled).length;
@@ -219,9 +277,9 @@ document.addEventListener("click",e=>{
   else if(t.dataset.x){if(confirm("Удалить товар из списка? В старых отчётах он останется.")){items=items.filter(i=>i.id!=t.dataset.x);saveItems();viewItems()}}
   else if(t.id==="add"){const n=$("#nn").value.trim();if(!n)return;items.push({id:Date.now(),cat:$("#nc").value,name:n,price:num($("#np").value)});saveItems();draft.inv=draft.inv||{};viewItems()}
 });
-document.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.id==="cd")connect(e.target.value)});
+document.addEventListener("keydown",e=>{if(e.key==="Enter"&&(e.target.id==="nk"||e.target.id==="pw"))login($("#nk").value,$("#pw").value)});
 if(!CLOUD&&ld("ws_items_v",0)<2){migrate();sv("ws_items_v",2);sv("ws_items2",items)}
-if(CLOUD&&code)connect(code);else render();
+if(CLOUD)startAuth();else render();
 </script>
 </body>
 </html>
