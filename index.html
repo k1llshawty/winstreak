@@ -223,7 +223,7 @@ function saveReport(r){
 }
 function viewLogin(){
   $("#bar").innerHTML="";
-  $("#v").innerHTML=booting?`<div class="empty">Загрузка…</div>`:`<div class="duo">${girl("g1")}</div><p class="tag">Win Streak · вход для персонала</p><div class="card"><h2>Вход</h2><label>Ник</label><input id="nk" autocomplete="username" autocapitalize="none"><label style="margin-top:10px">Пароль</label><input id="pw" type="password" autocomplete="current-password"><div class="bad" style="margin-top:8px">${esc(loginErr)}</div><button class="btn" id="go" style="margin-top:10px;width:100%">Войти</button></div>`;
+  $("#v").innerHTML=booting?`<div class="empty">Загрузка…</div>`:`<p class="tag">Вход для персонала клуба</p><div class="card"><h2>Вход</h2><label>Ник</label><input id="nk" autocomplete="username" autocapitalize="none"><label style="margin-top:10px">Пароль</label><input id="pw" type="password" autocomplete="current-password"><div class="bad" style="margin-top:8px">${esc(loginErr)}</div><button class="btn" id="go" style="margin-top:10px;width:100%">Войти</button></div>`;
 }
 function calc(){
   const total=num(draft.cash),exp=num(draft.float)+num(draft.system);
