@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Win Streak — отчёт смены</title>
+<style>
+:root{--bg:#f3f2f7;--card:#fff;--ink:#1c1b26;--mut:#6b6a7c;--line:#dedce8;--acc:#5b3df5;--accink:#fff;--ok:#12805c;--bad:#c62f3e;--soft:#ece9fd;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14131c;--card:#1e1d2a;--ink:#ecebf5;--mut:#9391a8;--line:#322f45;--acc:#8b74ff;--accink:#14131c;--ok:#4cd4a0;--bad:#ff7a87;--soft:#2a2645}}
+:root[data-theme="dark"]{--bg:#14131c;--card:#1e1d2a;--ink:#ecebf5;--mut:#9391a8;--line:#322f45;--acc:#8b74ff;--accink:#14131c;--ok:#4cd4a0;--bad:#ff7a87;--soft:#2a2645}
+*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 "Segoe UI",system-ui,-apple-system,Roboto,sans-serif}
+.wrap{max-width:720px;margin:0 auto;padding:16px 14px 90px}
+h1{font-size:22px;margin:4px 0 14px;letter-spacing:.2px}
+h2{font-size:17px;margin:0 0 10px}
+nav{display:flex;gap:6px;background:var(--card);padding:5px;border-radius:12px;border:1px solid var(--line);margin-bottom:14px}
+nav button{flex:1;padding:10px;border:0;background:none;color:var(--mut);font:inherit;font-weight:600;border-radius:8px;cursor:pointer}
+nav button.on{background:var(--acc);color:var(--accink)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:14px}
+label{display:block;font-size:13px;color:var(--mut);margin-bottom:3px}
+input,select,textarea{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 10px}
+input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.den{display:grid;grid-template-columns:70px 1fr 90px;gap:8px;align-items:center;margin-bottom:6px}
+.den b{font-variant-numeric:tabular-nums}.den span{text-align:right;color:var(--mut);font-variant-numeric:tabular-nums}
+.tot{display:flex;justify-content:space-between;align-items:baseline;padding-top:10px;margin-top:6px;border-top:1px solid var(--line);font-weight:700}
+.tot big{font-size:24px;font-variant-numeric:tabular-nums}
+.res{display:flex;justify-content:space-between;padding:4px 0}.ok{color:var(--ok)}.bad{color:var(--bad)}
+.cat{font-size:13px;font-weight:700;color:var(--acc);margin:12px 0 6px}
+.irow{padding:10px 0;border-top:1px solid var(--line)}
+.irow .nm{display:flex;justify-content:space-between;font-weight:600;margin-bottom:6px}
+.irow .nm span{font-weight:500;color:var(--mut);font-variant-numeric:tabular-nums}
+.btn{border:0;border-radius:10px;padding:12px 16px;font:inherit;font-weight:700;cursor:pointer;background:var(--acc);color:var(--accink)}
+.btn.s{background:var(--soft);color:var(--acc)}.btn.d{background:none;color:var(--bad);padding:6px 10px}
+.bar{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px));display:flex;gap:10px;justify-content:center}
+.bar .btn{flex:1;max-width:340px}
+.hist{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 0;border-top:1px solid var(--line);cursor:pointer}
+.hist:first-of-type{border-top:0}.hist small{color:var(--mut)}
+pre{white-space:pre-wrap;word-break:break-word;font:14px/1.5 ui-monospace,Consolas,monospace;background:var(--bg);padding:12px;border-radius:8px;border:1px solid var(--line);overflow-x:auto}
+.empty{color:var(--mut);text-align:center;padding:24px 8px}
+.toast{position:fixed;left:50%;bottom:80px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;z-index:9}
+.erow{display:grid;grid-template-columns:1fr 80px 36px;gap:6px;margin-bottom:6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>Win Streak · отчёт смены</h1>
+<nav id="nav"><button data-t="shift" class="on">Смена</button><button data-t="hist">История</button><button data-t="items">Товары</button></nav>
+<main id="v"></main>
+</div>
+<div class="bar" id="bar"></div>
+<script>
+const DEF=[["Энергетики","Адреналин",0],["Энергетики","Монстр",0],["Напитки","Фанта",0],["Напитки","Маунти Дью",0],["Напитки","Липтон",0],["Напитки","Вода",0],["Еда","Багет",0],["Еда","Шаурма",0],["Еда","Сэндвич",0]];
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const rub=n=>(Math.round(n)||0).toLocaleString("ru-RU")+" ₽";
+const num=v=>{const n=parseInt(v,10);return isNaN(n)?0:n};
+function ld(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}}
+function sv(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+let items=ld("ws_items2",null)||DEF.map((x,i)=>({id:i+1,cat:x[0],name:x[1],price:x[2]}));
+let reports=ld("ws_reports",[]);
+let draft=ld("ws_draft",null);
+let tab="shift",open=null;
+const nowLocal=()=>{const d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,16)};
+function fmt(iso){const d=new Date(iso);return d.toLocaleDateString("ru-RU",{day:"2-digit",month:"2-digit",year:"numeric"})+" "+d.toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"})}
+function newDraft(){
+  const last=reports[0],prev={};
+  if(last)last.items.forEach(i=>prev[i.name]=i.end);
+  return{date:nowLocal(),admin:last?last.admin:"",shift:"Дневная",cash:"",float:last?last.float:0,system:"",note:"",
+    inv:Object.fromEntries(items.map(i=>[i.id,{s:prev[i.name]??"",in:"",e:""}]))};
+}
+if(!draft)draft=newDraft();
+const save=()=>sv("ws_draft",draft);
+function calc(){
+  const total=num(draft.cash),exp=num(draft.float)+num(draft.system);
+  return{total,exp,diff:total-exp};
+}
+function itemRows(){
+  return items.map(i=>{const r=draft.inv[i.id]||(draft.inv[i.id]={s:"",in:"",e:""});
+    const sold=num(r.s)+num(r.in)-num(r.e);return{...i,start:num(r.s),in:num(r.in),end:num(r.e),sold,filled:r.e!==""}});
+}
+function render(){
+  document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("on",b.dataset.t===tab));
+  if(tab==="shift")viewShift();else if(tab==="hist")viewHist();else viewItems();
+}
+function viewShift(){
+  const c=calc(),cats=[...new Set(items.map(i=>i.cat))];
+  let h=`<div class="card"><div class="g2"><div><label>Дата и время</label><input type="datetime-local" data-f="date" value="${draft.date}"></div>
+  <div><label>Смена</label><select data-f="shift">${["Дневная","Ночная"].map(s=>`<option${draft.shift===s?" selected":""}>${s}</option>`).join("")}</select></div></div>
+  <div style="margin-top:10px"><label>Администратор</label><input data-f="admin" value="${esc(draft.admin)}" placeholder="Имя"></div></div>`;
+  h+=`<div class="card"><h2>Касса</h2><label>Итоговая сумма наличных в кассе, ₽</label><input type="number" inputmode="numeric" min="0" data-f="cash" value="${draft.cash??""}" placeholder="0" style="font-size:22px;font-weight:700"></div>`;
+  h+=`<div class="card"><h2>Сверка</h2><div class="g2"><div><label>Размен на начало смены, ₽</label><input type="number" inputmode="numeric" data-f="float" value="${draft.float}"></div>
+  <div><label>Наличные по системе, ₽</label><input type="number" inputmode="numeric" data-f="system" value="${draft.system}" placeholder="из программы клуба"></div></div>
+  <div id="rec" style="margin-top:10px"></div></div>`;
+  h+=`<div class="card"><h2>Остатки в холодильниках</h2><label>Начало подтянулось из прошлой смены. Введите приход и остаток на конец.</label>`;
+  cats.forEach(cat=>{h+=`<div class="cat">${esc(cat)}</div>`;
+    itemRows().filter(i=>i.cat===cat).forEach(i=>{h+=`<div class="irow"><div class="nm">${esc(i.name)}<span id="sd${i.id}">${i.filled?"продано "+i.sold:""}</span></div>
+    <div class="g3"><div><label>Начало</label><input type="number" inputmode="numeric" min="0" data-i="${i.id}" data-k="s" value="${draft.inv[i.id].s}"></div>
+    <div><label>Приход</label><input type="number" inputmode="numeric" min="0" data-i="${i.id}" data-k="in" value="${draft.inv[i.id].in}"></div>
+    <div><label>Остаток</label><input type="number" inputmode="numeric" min="0" data-i="${i.id}" data-k="e" value="${draft.inv[i.id].e}"></div></div></div>`})});
+  h+=`</div><div class="card"><label>Заметка по смене</label><textarea rows="2" data-f="note" placeholder="Что сломалось, что докупить…">${esc(draft.note)}</textarea></div>`;
+  $("#v").innerHTML=h;
+  $("#bar").innerHTML=`<button class="btn s" id="reset">Очистить</button><button class="btn" id="fin">Закрыть смену</button>`;
+  paintRec();
+}
+function paintRec(){
+  const c=calc(),el=$("#rec");if(!el)return;
+  const cls=c.diff===0?"ok":"bad",txt=c.diff===0?"Сходится":c.diff>0?"Излишек":"Недостача";
+  el.innerHTML=`<div class="res"><span>Должно быть в кассе</span><b>${rub(c.exp)}</b></div><div class="res"><span>По факту</span><b>${rub(c.total)}</b></div><div class="res ${cls}"><span>${txt}</span><b>${c.diff>0?"+":""}${rub(c.diff)}</b></div>`;
+}
+function snapshot(){
+  const c=calc(),rows=itemRows();
+  return{id:Date.now(),date:draft.date,admin:draft.admin.trim()||"—",shift:draft.shift,total:c.total,float:num(draft.float),system:num(draft.system),exp:c.exp,diff:c.diff,note:draft.note.trim(),
+    items:rows.map(r=>({name:r.name,cat:r.cat,price:r.price,start:r.start,in:r.in,end:r.end,sold:r.sold}))};
+}
+function report(r){
+  let t=`Win Streak — смена ${r.shift.toLowerCase()}\n${fmt(r.date)}\nАдминистратор: ${r.admin}\n\nКАССА\nПо факту: ${rub(r.total)}\nРазмен на начало: ${rub(r.float)}\nНаличные по системе: ${rub(r.system)}\nДолжно быть: ${rub(r.exp)}\n${r.diff===0?"Сходится":(r.diff>0?"Излишек: +":"Недостача: ")+rub(r.diff)}\n`;
+  [...new Set(r.items.map(i=>i.cat))].forEach(cat=>{t+=`\n${cat.toUpperCase()} (нач / приход / ост / продано)\n`;
+    r.items.filter(i=>i.cat===cat).forEach(i=>t+=`${i.name}: ${i.start} / ${i.in} / ${i.end} / ${i.sold}\n`)});
+  const sum=r.items.reduce((a,i)=>a+Math.max(0,i.sold)*i.price,0);
+  if(sum>0)t+=`\nТовары проданы на ≈ ${rub(sum)}\n`;
+  if(r.note)t+=`\nЗаметка: ${r.note}\n`;
+  return t;
+}
+function viewHist(){
+  $("#bar").innerHTML="";
+  if(open!==null){const r=reports.find(x=>x.id===open);if(r){
+    $("#v").innerHTML=`<div class="card"><pre>${esc(report(r))}</pre><div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button class="btn" id="cp">Копировать</button><button class="btn s" id="bk">Назад</button><button class="btn d" id="del">Удалить</button></div></div>`;
+    $("#cp").onclick=()=>copy(report(r));$("#bk").onclick=()=>{open=null;render()};
+    $("#del").onclick=()=>{if(confirm("Удалить этот отчёт?")){reports=reports.filter(x=>x.id!==r.id);sv("ws_reports",reports);open=null;render()}};return}}
+  $("#v").innerHTML=reports.length?`<div class="card">${reports.map(r=>`<div class="hist" data-r="${r.id}"><div><b>${fmt(r.date)}</b><br><small>${esc(r.admin)} · ${r.shift.toLowerCase()}</small></div><div style="text-align:right"><b>${rub(r.total)}</b><br><small class="${r.diff===0?"ok":"bad"}">${r.diff===0?"сходится":(r.diff>0?"+":"")+rub(r.diff)}</small></div></div>`).join("")}</div>`:`<div class="empty">Отчётов пока нет. Закройте первую смену — она появится здесь.</div>`;
+}
+function viewItems(){
+  $("#bar").innerHTML="";
+  let h=`<div class="card"><h2>Список товаров</h2><label>Название · цена, ₽. Укажите цены, чтобы в отчёте считалась сумма продаж.</label><div style="margin-top:8px">`;
+  items.forEach(i=>h+=`<div class="erow"><input data-e="${i.id}" data-k="name" value="${esc(i.name)}"><input type="number" inputmode="numeric" data-e="${i.id}" data-k="price" value="${i.price}"><button class="btn d" data-x="${i.id}" aria-label="Удалить">✕</button></div>`);
+  h+=`</div></div><div class="card"><h2>Добавить товар</h2><div class="g2"><div><label>Категория</label><select id="nc"><option>Энергетики</option><option>Напитки</option><option>Еда</option><option>Другое</option></select></div><div><label>Название</label><input id="nn"></div></div><button class="btn" id="add" style="margin-top:10px">Добавить</button></div>`;
+  $("#v").innerHTML=h;
+}
+function copy(t){
+  const ok=()=>toast("Скопировано");
+  try{navigator.clipboard.writeText(t).then(ok,()=>fb(t))}catch(e){fb(t)}
+  function fb(t){const a=document.createElement("textarea");a.value=t;document.body.appendChild(a);a.select();try{document.execCommand("copy");ok()}catch(e){}a.remove()}
+}
+function toast(m){const d=document.createElement("div");d.className="toast";d.textContent=m;document.body.appendChild(d);setTimeout(()=>d.remove(),1800)}
+document.addEventListener("input",e=>{
+  const t=e.target;
+  if(t.dataset.f){draft[t.dataset.f]=t.value;save();if(["float","system","cash"].includes(t.dataset.f))paintRec()}
+  else if(t.dataset.i){draft.inv[t.dataset.i][t.dataset.k]=t.value;save();const r=draft.inv[t.dataset.i];$("#sd"+t.dataset.i).textContent=r.e!==""?"продано "+(num(r.s)+num(r.in)-num(r.e)):""}
+  else if(t.dataset.e){const it=items.find(x=>x.id==t.dataset.e);it[t.dataset.k]=t.dataset.k==="price"?num(t.value):t.value;sv("ws_items2",items)}
+});
+document.addEventListener("click",e=>{
+  const t=e.target.closest("button,.hist");if(!t)return;
+  if(t.dataset.t){tab=t.dataset.t;open=null;render()}
+  else if(t.dataset.r){open=+t.dataset.r;render()}
+  else if(t.id==="reset"){if(confirm("Очистить введённые данные смены?")){draft=newDraft();save();render()}}
+  else if(t.id==="fin"){
+    const missing=itemRows().filter(i=>!i.filled).length;
+    if(missing&&!confirm("Остаток не введён у позиций: "+missing+". Они сохранятся как 0. Продолжить?"))return;
+    const r=snapshot();reports.unshift(r);sv("ws_reports",reports);draft=newDraft();save();
+    tab="hist";open=r.id;render();toast("Смена сохранена");
+  }
+  else if(t.dataset.x){if(confirm("Удалить товар из списка? В старых отчётах он останется.")){items=items.filter(i=>i.id!=t.dataset.x);sv("ws_items2",items);viewItems()}}
+  else if(t.id==="add"){const n=$("#nn").value.trim();if(!n)return;items.push({id:Date.now(),cat:$("#nc").value,name:n,price:0});sv("ws_items2",items);draft.inv=draft.inv||{};viewItems()}
+});
+render();
+</script>
+</body>
+</html>
