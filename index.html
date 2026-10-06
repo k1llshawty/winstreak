@@ -52,6 +52,13 @@ pre{white-space:pre-wrap;word-break:break-word;font:14px/1.5 ui-monospace,Consol
 <main id="v"></main>
 </div>
 <div class="bar" id="bar"></div>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+// ВСТАВЬТЕ СЮДА ДАННЫЕ ИЗ FIREBASE (Project settings → Your apps → firebaseConfig).
+// Пока apiKey пустой, приложение работает локально, без общей базы.
+const FIREBASE_CONFIG={apiKey:"AIzaSyAKyk1XIPGPijv5NXBw6WioX8cz84HopzI",authDomain:"winstreakpcclub.firebaseapp.com",projectId:"winstreakpcclub",storageBucket:"winstreakpcclub.firebasestorage.app",messagingSenderId:"1031724956829",appId:"1:1031724956829:web:8e22a550c225fd1109e874"};
+</script>
 <script>
 const DEF=[["Энергетики","Адреналин",0],["Энергетики","Монстр",0],["Напитки","Фанта",0],["Напитки","Маунти Дью",0],["Напитки","Липтон",0],["Напитки","Вода",0],["Еда","Багет",0],["Еда","Шаурма",0],["Еда","Сэндвич",0]];
 const $=s=>document.querySelector(s);
@@ -61,7 +68,11 @@ const num=v=>{const n=parseInt(v,10);return isNaN(n)?0:n};
 function ld(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}}
 function sv(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
 let items=ld("ws_items2",null)||DEF.map((x,i)=>({id:i+1,cat:x[0],name:x[1],price:x[2]}));
-let reports=ld("ws_reports",[]);
+const CLOUD=!!(window.firebase&&FIREBASE_CONFIG.apiKey);
+let reports=CLOUD?[]:ld("ws_reports",[]);
+let db=null,code=ld("ws_code",""),authed=!CLOUD,unsubs=[],loginErr="",tm;
+const cache=()=>{if(!CLOUD)sv("ws_reports",reports)};
+const col=n=>db.collection("clubs").doc(code).collection(n);
 let draft=ld("ws_draft",null);
 let tab="shift",open=null;
 const nowLocal=()=>{const d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,16)};
@@ -74,6 +85,34 @@ function newDraft(){
 }
 if(!draft)draft=newDraft();
 const save=()=>sv("ws_draft",draft);
+function saveItems(){sv("ws_items2",items);if(CLOUD&&authed){clearTimeout(tm);tm=setTimeout(pushItems,600)}}
+function pushItems(){col("meta").doc("items").set({list:items}).catch(()=>{})}
+function prefill(){const last=reports[0];if(!last)return;const prev={};last.items.forEach(i=>prev[i.name]=i.end);
+  items.forEach(i=>{const r=draft.inv[i.id];if(r&&!r.t&&prev[i.name]!==undefined)r.s=prev[i.name]})}
+function refresh(){prefill();const a=document.activeElement;if(a&&/INPUT|TEXTAREA|SELECT/.test(a.tagName))return;render()}
+function onErr(e){if(e&&e.code==="permission-denied"){authed=false;sv("ws_code","");loginErr="Код не подходит";render()}}
+async function connect(c){
+  c=String(c).trim().toLowerCase();if(!c)return;
+  try{
+    if(!db){firebase.initializeApp(FIREBASE_CONFIG);db=firebase.firestore()}
+    code=c;await col("meta").doc("items").get();
+    sv("ws_code",c);authed=true;loginErr="";listen();render();
+  }catch(e){authed=false;loginErr=e.code==="permission-denied"?"Неверный код":"Нет связи с базой. Проверьте интернет и настройки Firebase.";render()}
+}
+function listen(){
+  unsubs.forEach(f=>f());unsubs=[];
+  unsubs.push(col("meta").doc("items").onSnapshot(d=>{
+    if(d.exists&&d.data().list){items=d.data().list;sv("ws_items2",items);refresh()}else if(!d.exists)pushItems()},onErr));
+  unsubs.push(col("reports").orderBy("date","desc").limit(100).onSnapshot(q=>{reports=q.docs.map(x=>x.data());refresh()},onErr));
+}
+function saveReport(r){
+  if(CLOUD)col("reports").doc(String(r.id)).set(r).catch(()=>toast("Не удалось сохранить в облако"));
+  reports.unshift(r);cache();
+}
+function viewLogin(){
+  $("#bar").innerHTML="";
+  $("#v").innerHTML=`<div class="card"><h2>Вход</h2><label>Код доступа клуба</label><input id="cd" type="password" autocomplete="off" autocapitalize="none"><div class="bad" style="margin-top:8px">${esc(loginErr)}</div><button class="btn" id="go" style="margin-top:10px;width:100%">Войти</button></div>`;
+}
 function calc(){
   const total=num(draft.cash),exp=num(draft.float)+num(draft.system);
   return{total,exp,diff:total-exp};
@@ -83,6 +122,7 @@ function itemRows(){
     const sold=num(r.s)-num(r.e);return{...i,start:num(r.s),end:num(r.e),sold,filled:r.e!==""}});
 }
 function render(){
+  $("#nav").style.display=authed?"":"none";if(!authed){viewLogin();return}
   document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("on",b.dataset.t===tab));
   if(tab==="shift")viewShift();else if(tab==="hist")viewHist();else viewItems();
 }
@@ -129,14 +169,16 @@ function viewHist(){
   if(open!==null){const r=reports.find(x=>x.id===open);if(r){
     $("#v").innerHTML=`<div class="card"><pre>${esc(report(r))}</pre><div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button class="btn" id="cp">Копировать</button><button class="btn s" id="bk">Назад</button><button class="btn d" id="del">Удалить</button></div></div>`;
     $("#cp").onclick=()=>copy(report(r));$("#bk").onclick=()=>{open=null;render()};
-    $("#del").onclick=()=>{if(confirm("Удалить этот отчёт?")){reports=reports.filter(x=>x.id!==r.id);sv("ws_reports",reports);open=null;render()}};return}}
-  $("#v").innerHTML=reports.length?`<div class="card">${reports.map(r=>`<div class="hist" data-r="${r.id}"><div><b>${fmt(r.date)}</b><br><small>${esc(r.admin)} · ${r.shift.toLowerCase()}</small></div><div style="text-align:right"><b>${rub(r.total)}</b><br><small class="${r.diff===0?"ok":"bad"}">${r.diff===0?"сходится":(r.diff>0?"+":"")+rub(r.diff)}</small></div></div>`).join("")}</div>`:`<div class="empty">Отчётов пока нет. Закройте первую смену — она появится здесь.</div>`;
+    $("#del").onclick=()=>{if(confirm("Удалить этот отчёт?")){reports=reports.filter(x=>x.id!==r.id);cache();if(CLOUD)col("reports").doc(String(r.id)).delete();open=null;render()}};return}}
+  const old=CLOUD?ld("ws_reports",[]):[];
+  const mg=old.length?`<div class="card"><label>В этом браузере остались отчёты, которых нет в общей базе: ${old.length}.</label><button class="btn s" id="mig" style="margin-top:8px;width:100%">Перенести в общую базу</button></div>`:"";
+  $("#v").innerHTML=mg+(reports.length?`<div class="card">${reports.map(r=>`<div class="hist" data-r="${r.id}"><div><b>${fmt(r.date)}</b><br><small>${esc(r.admin)} · ${r.shift.toLowerCase()}</small></div><div style="text-align:right"><b>${rub(r.total)}</b><br><small class="${r.diff===0?"ok":"bad"}">${r.diff===0?"сходится":(r.diff>0?"+":"")+rub(r.diff)}</small></div></div>`).join("")}</div>`:`<div class="empty">Отчётов пока нет. Закройте первую смену — она появится здесь.</div>`);
 }
 function viewItems(){
   $("#bar").innerHTML="";
   let h=`<div class="card"><h2>Список товаров</h2><label>Название · цена, ₽. Укажите цены, чтобы в отчёте считалась сумма продаж.</label><div style="margin-top:8px">`;
   items.forEach(i=>h+=`<div class="erow"><input data-e="${i.id}" data-k="name" value="${esc(i.name)}"><input type="number" inputmode="numeric" data-e="${i.id}" data-k="price" value="${i.price}"><button class="btn d" data-x="${i.id}" aria-label="Удалить">✕</button></div>`);
-  h+=`</div></div><div class="card"><h2>Добавить товар</h2><div class="g2"><div><label>Категория</label><select id="nc"><option>Энергетики</option><option>Напитки</option><option>Еда</option><option>Другое</option></select></div><div><label>Название</label><input id="nn"></div></div><button class="btn" id="add" style="margin-top:10px">Добавить</button></div>`;
+  h+=`</div></div><div class="card"><h2>Добавить товар</h2><div class="g2"><div><label>Категория</label><select id="nc"><option>Энергетики</option><option>Напитки</option><option>Еда</option><option>Другое</option></select></div><div><label>Название</label><input id="nn"></div></div><button class="btn" id="add" style="margin-top:10px">Добавить</button></div>`+(CLOUD?`<div class="card"><button class="btn s" id="lo" style="width:100%">Выйти из общей базы</button></div>`:"");
   $("#v").innerHTML=h;
 }
 function copy(t){
@@ -148,24 +190,29 @@ function toast(m){const d=document.createElement("div");d.className="toast";d.te
 document.addEventListener("input",e=>{
   const t=e.target;
   if(t.dataset.f){draft[t.dataset.f]=t.value;save();if(["float","system","cash"].includes(t.dataset.f))paintRec()}
-  else if(t.dataset.i){draft.inv[t.dataset.i][t.dataset.k]=t.value;save();const r=draft.inv[t.dataset.i];$("#sd"+t.dataset.i).textContent=r.e!==""?"продано "+(num(r.s)-num(r.e)):""}
-  else if(t.dataset.e){const it=items.find(x=>x.id==t.dataset.e);it[t.dataset.k]=t.dataset.k==="price"?num(t.value):t.value;sv("ws_items2",items)}
+  else if(t.dataset.i){draft.inv[t.dataset.i][t.dataset.k]=t.value;if(t.dataset.k==="s")draft.inv[t.dataset.i].t=1;save();const r=draft.inv[t.dataset.i];$("#sd"+t.dataset.i).textContent=r.e!==""?"продано "+(num(r.s)-num(r.e)):""}
+  else if(t.dataset.e){const it=items.find(x=>x.id==t.dataset.e);it[t.dataset.k]=t.dataset.k==="price"?num(t.value):t.value;saveItems()}
 });
 document.addEventListener("click",e=>{
   const t=e.target.closest("button,.hist");if(!t)return;
   if(t.dataset.t){tab=t.dataset.t;open=null;render()}
   else if(t.dataset.r){open=+t.dataset.r;render()}
+  else if(t.id==="go")connect($("#cd").value)
+  else if(t.id==="mig"){const b=db.batch();ld("ws_reports",[]).forEach(r=>b.set(col("reports").doc(String(r.id)),r));
+    b.commit().then(()=>{sv("ws_reports",[]);toast("Отчёты перенесены");render()},()=>toast("Не удалось перенести"))}
+  else if(t.id==="lo"){unsubs.forEach(f=>f());unsubs=[];sv("ws_code","");authed=false;reports=[];render()}
   else if(t.id==="reset"){if(confirm("Очистить введённые данные смены?")){draft=newDraft();save();render()}}
   else if(t.id==="fin"){
     const missing=itemRows().filter(i=>!i.filled).length;
     if(missing&&!confirm("Остаток не введён у позиций: "+missing+". Они сохранятся как 0. Продолжить?"))return;
-    const r=snapshot();reports.unshift(r);sv("ws_reports",reports);draft=newDraft();save();
+    const r=snapshot();saveReport(r);draft=newDraft();save();
     tab="hist";open=r.id;render();toast("Смена сохранена");
   }
-  else if(t.dataset.x){if(confirm("Удалить товар из списка? В старых отчётах он останется.")){items=items.filter(i=>i.id!=t.dataset.x);sv("ws_items2",items);viewItems()}}
-  else if(t.id==="add"){const n=$("#nn").value.trim();if(!n)return;items.push({id:Date.now(),cat:$("#nc").value,name:n,price:0});sv("ws_items2",items);draft.inv=draft.inv||{};viewItems()}
+  else if(t.dataset.x){if(confirm("Удалить товар из списка? В старых отчётах он останется.")){items=items.filter(i=>i.id!=t.dataset.x);saveItems();viewItems()}}
+  else if(t.id==="add"){const n=$("#nn").value.trim();if(!n)return;items.push({id:Date.now(),cat:$("#nc").value,name:n,price:0});saveItems();draft.inv=draft.inv||{};viewItems()}
 });
-render();
+document.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.id==="cd")connect(e.target.value)});
+if(CLOUD&&code)connect(code);else render();
 </script>
 </body>
 </html>
